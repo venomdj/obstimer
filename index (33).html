@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stream countdown</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Oswald:wght@700&family=Anton&family=Bebas+Neue&family=Teko:wght@600&family=Big+Shoulders+Display:wght@800&family=Saira+Extra+Condensed:wght@700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#101214;--panel:#171a1d;--line:#2b3035;--text:#f4f5f6;--muted:#8b939b;--ui:"Inter",system-ui,sans-serif}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--text);font:400 14px/1.4 var(--ui)}
+body.ov{background:transparent;overflow:hidden}
+body.ov .ctl{display:none}
+
+/* ---------- Overlay ---------- */
+.frame{position:relative;width:100%;aspect-ratio:16/9;border-radius:8px;overflow:hidden;display:flex;
+  padding:calc(var(--u,8px)*4);background:repeating-conic-gradient(#222 0 25%,#1a1a1a 0 50%) 0 0/24px 24px}
+.frame.ov{position:fixed;inset:0;width:auto;aspect-ratio:auto;border-radius:0;background:transparent}
+.frame.solid{background:var(--bgc)!important}
+.a-c{align-items:center;justify-content:center}
+.a-t{align-items:flex-start;justify-content:center}
+.a-b{align-items:flex-end;justify-content:center}
+.a-tl{align-items:flex-start;justify-content:flex-start}
+.a-tr{align-items:flex-start;justify-content:flex-end}
+.a-bl{align-items:flex-end;justify-content:flex-start}
+.a-br{align-items:flex-end;justify-content:flex-end}
+.stage{display:flex;flex-direction:column;align-items:center;gap:calc(var(--u,8px)*1.4);transition:opacity .4s}
+.a-tl .stage,.a-bl .stage{align-items:flex-start}
+.a-tr .stage,.a-br .stage{align-items:flex-end}
+.fade .stage{animation:in .7s ease both}
+@keyframes in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.label{font-family:var(--font);font-weight:var(--lw);text-transform:uppercase;letter-spacing:.04em;line-height:1;
+  font-size:calc(var(--u,8px)*3.6*var(--ls));color:var(--lc);padding:.3em .65em .22em;
+  border:calc(var(--bw)*1em) solid var(--bc);background:var(--lf)}
+.label.nobox{border:0;background:none;padding:0}
+.label[hidden]{display:none}
+.time{font-family:var(--font);font-weight:var(--tw);text-transform:uppercase;font-variant-numeric:tabular-nums;
+  font-size:calc(var(--u,8px)*17*var(--ts));line-height:.92;letter-spacing:.01em;white-space:nowrap}
+.time.endtxt{font-size:calc(var(--u,8px)*10*var(--ts))}
+.shadow .time,.shadow .label{text-shadow:0 .03em .35em rgba(0,0,0,.5)}
+
+/* ---------- Controller ---------- */
+.ctl{max-width:1180px;margin:0 auto;padding:28px 20px 60px;display:grid;grid-template-columns:340px 1fr;gap:28px;align-items:start}
+@media(max-width:860px){.ctl{grid-template-columns:1fr}}
+h1{font:700 22px var(--ui);margin-bottom:18px}
+h2{font:500 13px var(--ui);color:var(--muted);margin:22px 0 8px;padding-top:14px;border-top:1px solid var(--line)}
+h2:first-child{border:0;margin-top:0;padding-top:0}
+.f{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0}
+.f[hidden]{display:none}
+.f>span{color:var(--muted);flex:0 0 auto}
+.f input:not([type=checkbox]):not([type=range]):not([type=color]),.f select{background:var(--panel);border:1px solid var(--line);
+  border-radius:6px;color:var(--text);font:400 14px var(--ui);padding:7px 9px;width:170px}
+.f input[type=color]{width:44px;height:30px;border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:2px}
+.f input[type=range]{width:150px;accent-color:#fff}
+.f input[type=checkbox]{width:18px;height:18px;accent-color:#fff}
+.f output{width:34px;text-align:right;color:var(--muted);font-size:12px}
+.rt{display:flex;align-items:center;gap:6px}
+:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+.bar{display:flex;gap:10px;margin:14px 0 22px;flex-wrap:wrap}
+button{font:500 14px var(--ui);padding:10px 18px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--text);cursor:pointer}
+button.p{background:var(--text);color:var(--bg);border-color:var(--text)}
+button:hover{border-color:var(--muted)}
+textarea{width:100%;height:84px;resize:vertical;background:var(--panel);border:1px solid var(--line);border-radius:6px;color:var(--text);font:12px/1.4 ui-monospace,Consolas,monospace;padding:10px}
+.note{color:var(--muted);font-size:13px;margin-top:14px;line-height:1.6}
+.note b{color:var(--text);font-weight:500}
+.hint{color:var(--muted);font-size:12px;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="ctl">
+  <div>
+    <h1>Stream countdown</h1>
+    <div id="fields"></div>
+  </div>
+  <div>
+    <div id="slot"></div>
+    <div class="bar">
+      <button class="p" id="go">Start</button>
+      <button id="reset">Reset</button>
+      <button id="copy">Copy OBS link</button>
+    </div>
+    <textarea id="link" readonly aria-label="OBS link"></textarea>
+    <p class="hint">Shortcuts: Space starts or pauses, R resets. Checkerboard means transparent in OBS.</p>
+    <div class="note">
+      <b>OBS setup.</b> Add a Browser Source, paste the link, set 1920 × 1080. Leave "Local file" off.<br>
+      For a timer that survives scene switches, turn off "Shutdown source when not visible", or use <b>Count to clock time</b>, which always shows the same deadline.<br>
+      To restart the timer every time the scene appears, turn on "Refresh browser when scene becomes active". Turn "Keep time across reloads" off for this.<br>
+      For sound, set the source's audio to "Monitor and Output".
+    </div>
+  </div>
+</div>
+
+<div class="frame" id="frame"><div class="stage" id="stage"><div class="label" id="label"></div><div class="time" id="time">10:00</div></div></div>
+
+<script>
+(function(){
+var DEF={text:'Show starting in',showText:true,mode:'dur',min:10,sec:0,endTime:'20:00',fmt:'auto',
+ font:'Barlow Condensed',tcolor:'#ffffff',lcolor:'#ffffff',box:true,bcolor:'#ffffff',bw:9,fill:'#000000',fa:55,
+ size:100,lsize:100,shadow:true,align:'c',solid:false,bgc:'#00b140',
+ warnAt:10,wcolor:'#ff5555',endAct:'hold',endText:"We're live",beep:false,anim:'fade',persist:false};
+var FONTS={'Barlow Condensed':800,'Oswald':700,'Anton':400,'Bebas Neue':400,'Teko':600,'Big Shoulders Display':800,'Saira Extra Condensed':800};
+var PRESETS=[['Show starting in',10,0],['Starting soon',5,0],['Be right back',10,0],['Intermission',15,0],['Stream ends in',5,0]];
+var $=function(id){return document.getElementById(id)};
+var q=new URLSearchParams(location.search), overlay=q.get('o')==='1';
+var cfg=Object.assign({},DEF);
+if(!overlay){try{Object.assign(cfg,JSON.parse(localStorage.getItem('cdcfg')||'{}'))}catch(e){}}
+Object.keys(DEF).forEach(function(k){if(q.has(k)){var v=q.get(k),d=DEF[k];cfg[k]=typeof d==='boolean'?v==='1':typeof d==='number'?(Number(v)||0):v}});
+if(overlay)document.body.classList.add('ov');
+
+/* ---------- controls ---------- */
+var F=[['g','Content'],['preset','Preset','preset'],['text','Heading','text'],['showText','Show heading','check'],
+['mode','Mode','select',[['dur','Countdown'],['end','Count to clock time'],['up','Stopwatch']]],
+['min','Minutes','num',[0,999]],['sec','Seconds','num',[0,59]],['endTime','Ends at','time'],
+['fmt','Time format','select',[['auto','Auto'],['ms','MM:SS'],['hms','H:MM:SS']]],
+['g','Look'],['font','Font','select',Object.keys(FONTS).map(function(f){return [f,f]})],
+['tcolor','Timer color','color'],['lcolor','Heading color','color'],['box','Heading box','check'],
+['bcolor','Border color','color'],['bw','Border thickness','range',[0,20]],['fill','Box fill','color'],['fa','Box fill opacity','range',[0,100]],
+['size','Timer size','range',[40,200]],['lsize','Heading size','range',[40,200]],['shadow','Soft shadow','check'],
+['align','Position','select',[['c','Center'],['t','Top'],['b','Bottom'],['tl','Top left'],['tr','Top right'],['bl','Bottom left'],['br','Bottom right']]],
+['solid','Solid background','check'],['bgc','Background color','color'],
+['g','Behavior'],['warnAt','Warning at (sec, 0 = off)','num',[0,3600]],['wcolor','Warning color','color'],
+['endAct','When finished','select',[['hold','Hold at 00:00'],['text','Show message'],['hide','Hide overlay'],['loop','Restart']]],
+['endText','Message','text'],['beep','Beep at end','check'],['anim','Entrance','select',[['fade','Fade in'],['none','None']]],
+['persist','Keep time across reloads','check']];
+var SHOW={min:function(){return cfg.mode==='dur'},sec:function(){return cfg.mode==='dur'},endTime:function(){return cfg.mode==='end'},
+ bcolor:function(){return cfg.box},bw:function(){return cfg.box},fill:function(){return cfg.box},fa:function(){return cfg.box},
+ bgc:function(){return cfg.solid},warnAt:function(){return cfg.mode!=='up'},wcolor:function(){return cfg.mode!=='up'&&cfg.warnAt>0},
+ endAct:function(){return cfg.mode!=='up'},endText:function(){return cfg.mode!=='up'&&cfg.endAct==='text'},
+ beep:function(){return cfg.mode!=='up'},persist:function(){return cfg.mode==='dur'}};
+var rows={};
+function mk(t,a){var e=document.createElement(t);for(var k in a)e[k]=a[k];return e}
+F.forEach(function(r){
+  var root=$('fields');
+  if(r[0]==='g'){root.appendChild(mk('h2',{textContent:r[1]}));return}
+  var k=r[0],type=r[2],opt=r[3],row=mk('label',{className:'f'}),el;
+  row.appendChild(mk('span',{textContent:r[1]}));
+  if(type==='select'||type==='preset'){
+    el=mk('select',{});
+    var opts=type==='preset'?[['','Choose…']].concat(PRESETS.map(function(p,i){return [i,p[0]]})):opt;
+    opts.forEach(function(o){el.appendChild(mk('option',{value:o[0],textContent:o[1]}))});
+  }else if(type==='check'){el=mk('input',{type:'checkbox'})}
+  else if(type==='num'){el=mk('input',{type:'number',min:opt[0],max:opt[1]})}
+  else if(type==='range'){el=mk('input',{type:'range',min:opt[0],max:opt[1]})}
+  else{el=mk('input',{type:type})}
+  var wrap=el;
+  if(type==='range'){wrap=mk('span',{className:'rt'});var out=mk('output',{});wrap.appendChild(el);wrap.appendChild(out);el._out=out}
+  row.appendChild(wrap);$('fields').appendChild(row);rows[k]={row:row,el:el,type:type};
+  el.addEventListener('input',function(){
+    if(type==='preset'){var p=PRESETS[el.value];if(p){cfg.text=p[0];cfg.mode='dur';cfg.min=p[1];cfg.sec=p[2]}el.value='';sync();changed(true);return}
+    cfg[k]=type==='check'?el.checked:(type==='num'||type==='range')?(Number(el.value)||0):el.value;
+    if(el._out)el._out.textContent=el.value;
+    changed(k==='mode'||k==='min'||k==='sec'||k==='endTime'||k==='endAct');
+  });
+});
+function sync(){
+  Object.keys(rows).forEach(function(k){var r=rows[k];if(r.type==='preset')return;
+    if(r.type==='check')r.el.checked=cfg[k];else r.el.value=cfg[k];
+    if(r.el._out)r.el._out.textContent=cfg[k];
+    r.row.hidden=SHOW[k]?!SHOW[k]():false});
+}
+
+/* ---------- styling ---------- */
+function rgba(h,a){var n=parseInt(h.slice(1),16);return 'rgba('+(n>>16&255)+','+(n>>8&255)+','+(n&255)+','+a/100+')'}
+function apply(){
+  var f=$('frame'),s=f.style,w=FONTS[cfg.font]||700;
+  f.className='frame a-'+cfg.align+(overlay?' ov':'')+(cfg.solid?' solid':'')+(cfg.shadow?' shadow':'')+(cfg.anim==='fade'?' fade':'');
+  s.setProperty('--font','"'+cfg.font+'","Arial Narrow",Impact,sans-serif');
+  s.setProperty('--tw',w);s.setProperty('--lw',w===800?700:w);
+  s.setProperty('--lc',cfg.lcolor);s.setProperty('--bc',cfg.bcolor);s.setProperty('--bw',cfg.bw/100);
+  s.setProperty('--lf',rgba(cfg.fill,cfg.fa));s.setProperty('--bgc',cfg.bgc);
+  s.setProperty('--ts',cfg.size/100);s.setProperty('--ls',cfg.lsize/100);
+  var l=$('label');l.className='label'+(cfg.box?'':' nobox');l.hidden=!cfg.showText||!cfg.text;l.textContent=cfg.text;
+}
+function fit(){var f=$('frame');var w=f.clientWidth,h=f.clientHeight;if(w&&h)f.style.setProperty('--u',Math.min(w/100,h/56.25)+'px')}
+if(window.ResizeObserver)new ResizeObserver(fit).observe($('frame'));window.addEventListener('resize',fit);
+if(!overlay)$('slot').appendChild($('frame'));
+
+/* ---------- timer ---------- */
+var iv=null,run=false,ended=false,left=0,endAt=0,t0=0,el=0;
+function total(){return cfg.min*60+cfg.sec}
+function target(){var p=(cfg.endTime||'0:0').split(':').map(Number),d=new Date();d.setHours(p[0]||0,p[1]||0,0,0);var ms=d.getTime();if(ms<Date.now()-12e4)ms+=864e5;return ms}
+function pad(n){return String(n).padStart(2,'0')}
+function fmtT(s){s=Math.max(0,Math.floor(s));var h=Math.floor(s/3600),m=Math.floor(s%3600/60),r=s%60;
+  if(cfg.fmt==='ms')return pad(Math.floor(s/60))+':'+pad(r);
+  if(cfg.fmt==='hms'||(cfg.fmt==='auto'&&h>0))return h+':'+pad(m)+':'+pad(r);
+  return pad(m)+':'+pad(r)}
+function ui(){$('go').textContent=run?'Pause':'Start';$('go').hidden=cfg.mode==='end'}
+function render(){
+  var t=$('time'),isEnd=ended&&cfg.endAct==='text'&&cfg.mode!=='up',txt,warn=false;
+  if(cfg.mode==='up')txt=fmtT(el);
+  else if(isEnd)txt=cfg.endText;
+  else{txt=fmtT(Math.ceil(left));warn=cfg.warnAt>0&&left>0&&left<=cfg.warnAt&&(run||overlay)}
+  t.textContent=txt;t.classList.toggle('endtxt',isEnd);t.style.color=warn?cfg.wcolor:cfg.tcolor;
+  $('stage').style.opacity=(ended&&cfg.endAct==='hide'&&cfg.mode!=='up')?(overlay?0:.25):1;
+}
+function beep(){try{var c=new(window.AudioContext||window.webkitAudioContext)();
+  [0,.25,.5].forEach(function(d){var o=c.createOscillator(),g=c.createGain();o.frequency.value=880;o.connect(g);g.connect(c.destination);
+  g.gain.setValueAtTime(.2,c.currentTime+d);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+d+.18);o.start(c.currentTime+d);o.stop(c.currentTime+d+.2)})}catch(e){}}
+function tick(){
+  var n=Date.now();
+  if(cfg.mode==='up')el=(n-t0)/1000;
+  else{left=(endAt-n)/1000;if(left<=0){left=0;finish();return}}
+  render();
+}
+function finish(){
+  clearInterval(iv);run=false;ended=true;if(cfg.beep)beep();
+  if(cfg.endAct==='loop'&&cfg.mode==='dur'){ended=false;left=total();start();return}
+  ui();render();
+}
+function start(){
+  if(cfg.mode==='up')t0=Date.now()-el*1000;
+  else if(cfg.mode==='end'){ended=false;endAt=target()}
+  else{
+    if(ended||left<=0){ended=false;left=total()}
+    endAt=Date.now()+left*1000;
+    if(overlay&&cfg.persist&&cfg.endAct!=='loop'){
+      try{var k='cd'+location.search,s=Number(localStorage.getItem(k));if(s>Date.now()-12e4)endAt=s;else localStorage.setItem(k,endAt)}catch(e){}
+    }
+  }
+  run=true;clearInterval(iv);iv=setInterval(tick,200);ui();tick();
+}
+function stop(){clearInterval(iv);run=false;ui()}
+function reinit(){stop();ended=false;el=0;left=total();if(cfg.mode==='end')start();else render();ui()}
+
+function link(){
+  var p=new URLSearchParams();p.set('o','1');
+  Object.keys(DEF).forEach(function(k){if(cfg[k]!==DEF[k])p.set(k,typeof DEF[k]==='boolean'?(cfg[k]?'1':'0'):cfg[k])});
+  return location.href.split(/[?#]/)[0]+'?'+p.toString();
+}
+function changed(restart){
+  if(!overlay){try{localStorage.setItem('cdcfg',JSON.stringify(cfg))}catch(e){}$('link').value=link()}
+  apply();fit();sync();
+  if(restart||(!run&&!ended))reinit();else render();
+}
+
+if(!overlay){
+  $('go').onclick=function(){if(run){tick();stop()}else start()};
+  $('reset').onclick=reinit;
+  $('copy').onclick=function(){var l=link(),b=$('copy'),ok=function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy OBS link'},1500)};
+    if(navigator.clipboard)navigator.clipboard.writeText(l).then(ok,function(){$('link').select();document.execCommand('copy');ok()});
+    else{$('link').select();document.execCommand('copy');ok()}};
+  document.addEventListener('keydown',function(e){
+    if(/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName))return;
+    if(e.code==='Space'){e.preventDefault();$('go').click()}
+    if(e.key==='r'||e.key==='R')reinit();
+  });
+}
+
+apply();sync();fit();
+if(!overlay)$('link').value=link();
+reinit();
+if(overlay&&cfg.mode!=='end')start();
+})();
+</script>
+</body>
+</html>
